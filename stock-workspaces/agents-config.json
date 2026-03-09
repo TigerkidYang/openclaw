@@ -1,0 +1,42 @@
+{
+  "_comment": "将此 agents 配置合并到 Codespace 的 ~/.openclaw/openclaw.json 中",
+  "agents": {
+    "defaults": {
+      "model": "openrouter/google/gemini-3-flash-preview",
+      "subagents": {
+        "maxSpawnDepth": 1,
+        "maxConcurrent": 8
+      }
+    },
+    "list": [
+      {
+        "id": "stock-orchestrator",
+        "name": "Stock Orchestrator",
+        "default": true,
+        "workspace": "~/.openclaw/workspace-orchestrator",
+        "subagents": {
+          "allowAgents": ["stock-technical", "stock-fundamental", "stock-sentiment"]
+        },
+        "skills": ["stock_analysis"]
+      },
+      {
+        "id": "stock-technical",
+        "name": "Technical Analyst",
+        "workspace": "~/.openclaw/workspace-technical",
+        "skills": ["stock_analysis"]
+      },
+      {
+        "id": "stock-fundamental",
+        "name": "Fundamental Analyst",
+        "workspace": "~/.openclaw/workspace-fundamental",
+        "skills": []
+      },
+      {
+        "id": "stock-sentiment",
+        "name": "Sentiment Analyst",
+        "workspace": "~/.openclaw/workspace-sentiment",
+        "skills": []
+      }
+    ]
+  }
+}

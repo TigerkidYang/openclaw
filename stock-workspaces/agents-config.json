@@ -10,10 +10,10 @@
     },
     "list": [
       {
-        "id": "stock-orchestrator",
+        "id": "main",
         "name": "Stock Orchestrator",
         "default": true,
-        "workspace": "~/.openclaw/workspace-orchestrator",
+        "workspace": "~/.openclaw/workspace-main",
         "subagents": {
           "allowAgents": ["stock-technical", "stock-fundamental", "stock-sentiment"]
         },

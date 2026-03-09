@@ -19,7 +19,7 @@
         },
         "skills": [],
         "tools": {
-          "deny": ["exec", "process", "web_search", "web_fetch", "browser"]
+          "allow": ["sessions_spawn", "sessions_list", "sessions_history", "message"]
         }
       },
       {

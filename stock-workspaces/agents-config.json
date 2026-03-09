@@ -17,7 +17,7 @@
         "subagents": {
           "allowAgents": ["stock-technical", "stock-fundamental", "stock-sentiment"]
         },
-        "skills": ["stock_analysis"]
+        "skills": []
       },
       {
         "id": "stock-technical",

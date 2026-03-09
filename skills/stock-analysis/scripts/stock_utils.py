@@ -5,7 +5,7 @@ import json
 import akshare as ak
 import pandas as pd
 import numpy as np
-from datetime import datetime
+import datetime as dt
 
 
 # ============================================================
@@ -13,7 +13,7 @@ from datetime import datetime
 # ============================================================
 
 def to_json(obj):
-    """JSON 序列化，自动处理 numpy/pandas 类型"""
+    """JSON 序列化，自动处理 numpy/pandas/datetime 类型"""
     def _default(o):
         if isinstance(o, (np.integer,)):
             return int(o)
@@ -21,13 +21,19 @@ def to_json(obj):
             return float(o)
         if isinstance(o, np.ndarray):
             return o.tolist()
-        if isinstance(o, pd.Timestamp):
+        if isinstance(o, (pd.Timestamp, dt.datetime, dt.date)):
             return str(o)
         if isinstance(o, pd.DataFrame):
             return o.to_dict(orient="records")
         if isinstance(o, pd.Series):
             return o.tolist()
-        raise TypeError(f"Object of type {type(o)} is not JSON serializable")
+        if isinstance(o, (np.bool_,)):
+            return bool(o)
+        # fallback: 尝试转字符串
+        try:
+            return str(o)
+        except Exception:
+            raise TypeError(f"Object of type {type(o)} is not JSON serializable")
     return json.dumps(obj, ensure_ascii=False, indent=2, default=_default)
 
 
@@ -241,6 +247,7 @@ def fetch_financial_summary(code: str) -> dict:
         df = ak.stock_financial_abstract_ths(symbol=code, indicator="按报告期")
         if df is None or df.empty:
             return {"error": "无财务数据"}
+        df = _sanitize_df(df)
         latest = df.iloc[0]
         return {col: latest[col] for col in df.columns}
     except Exception as e:
@@ -253,7 +260,7 @@ def fetch_financial_history(code: str, n: int = 8) -> list:
         df = ak.stock_financial_abstract_ths(symbol=code, indicator="按报告期")
         if df is None or df.empty:
             return []
-        df = df.head(n)
+        df = _sanitize_df(df.head(n))
         return df.to_dict(orient="records")
     except Exception as e:
         return [{"error": str(e)}]
@@ -265,7 +272,10 @@ def fetch_valuation(code: str) -> dict:
         df = ak.stock_individual_info_em(symbol=code)
         result = {}
         for _, row in df.iterrows():
-            result[row["item"]] = row["value"]
+            val = row["value"]
+            if isinstance(val, (dt.date, dt.datetime, pd.Timestamp)):
+                val = str(val)
+            result[row["item"]] = val
         return result
     except Exception as e:
         return {"error": str(e)}
@@ -277,7 +287,8 @@ def fetch_top10_holders(code: str) -> list:
         df = ak.stock_main_stock_holder(stock=code)
         if df is None or df.empty:
             return []
-        return df.head(10).to_dict(orient="records")
+        df = _sanitize_df(df.head(10))
+        return df.to_dict(orient="records")
     except Exception as e:
         return [{"error": str(e)}]
 
@@ -288,6 +299,7 @@ def fetch_profit_forecast(code: str) -> list:
         df = ak.stock_profit_forecast_ths(symbol=code, indicator="预测年报每股收益")
         if df is None or df.empty:
             return []
+        df = _sanitize_df(df)
         return df.to_dict(orient="records")
     except Exception as e:
         return [{"error": str(e)}]
@@ -297,13 +309,24 @@ def fetch_profit_forecast(code: str) -> list:
 # 资金与情绪
 # ============================================================
 
+def _sanitize_df(df: pd.DataFrame) -> pd.DataFrame:
+    """将 DataFrame 中的日期列转为字符串，避免 JSON 序列化问题"""
+    for col in df.columns:
+        if pd.api.types.is_datetime64_any_dtype(df[col]):
+            df[col] = df[col].astype(str)
+        elif df[col].dtype == object:
+            df[col] = df[col].apply(lambda x: str(x) if isinstance(x, (dt.date, dt.datetime, pd.Timestamp)) else x)
+    return df
+
+
 def fetch_fund_flow(code: str, days: int = 10) -> list:
     """获取个股资金流向（主力/散户/超大单）"""
     try:
         df = ak.stock_individual_fund_flow(stock=code, market="sh" if code.startswith("6") else "sz")
         if df is None or df.empty:
             return []
-        return df.tail(days).to_dict(orient="records")
+        df = _sanitize_df(df.tail(days))
+        return df.to_dict(orient="records")
     except Exception as e:
         return [{"error": str(e)}]
 
@@ -314,7 +337,8 @@ def fetch_north_flow_daily(days: int = 20) -> list:
         df = ak.stock_hsgt_north_net_flow_in_em(symbol="北上")
         if df is None or df.empty:
             return []
-        return df.tail(days).to_dict(orient="records")
+        df = _sanitize_df(df.tail(days))
+        return df.to_dict(orient="records")
     except Exception as e:
         return [{"error": str(e)}]
 
@@ -325,7 +349,8 @@ def fetch_sector_fund_flow() -> list:
         df = ak.stock_sector_fund_flow_rank(indicator="今日", sector_type="行业资金流")
         if df is None or df.empty:
             return []
-        return df.head(20).to_dict(orient="records")
+        df = _sanitize_df(df.head(20))
+        return df.to_dict(orient="records")
     except Exception as e:
         return [{"error": str(e)}]
 
@@ -336,6 +361,7 @@ def fetch_stock_comments(code: str) -> dict:
         df = ak.stock_comment_detail_zlkp_jgcyd_em(symbol=code)
         if df is None or df.empty:
             return {"error": "无千股千评数据"}
+        df = _sanitize_df(df)
         return df.to_dict(orient="records")
     except Exception as e:
         return {"error": str(e)}

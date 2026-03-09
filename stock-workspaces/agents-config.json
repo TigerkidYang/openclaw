@@ -26,19 +26,28 @@
         "id": "stock-technical",
         "name": "Technical Analyst",
         "workspace": "~/.openclaw/workspace-technical",
-        "skills": ["stock_analysis"]
+        "skills": [],
+        "tools": {
+          "allow": ["exec", "read", "write", "web_search", "web_fetch"]
+        }
       },
       {
         "id": "stock-fundamental",
         "name": "Fundamental Analyst",
         "workspace": "~/.openclaw/workspace-fundamental",
-        "skills": []
+        "skills": [],
+        "tools": {
+          "allow": ["exec", "read", "write", "web_search", "web_fetch"]
+        }
       },
       {
         "id": "stock-sentiment",
         "name": "Sentiment Analyst",
         "workspace": "~/.openclaw/workspace-sentiment",
-        "skills": []
+        "skills": [],
+        "tools": {
+          "allow": ["exec", "read", "write", "web_search", "web_fetch"]
+        }
       }
     ]
   }

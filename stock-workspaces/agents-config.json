@@ -13,6 +13,7 @@
         "id": "main",
         "name": "Stock Orchestrator",
         "default": true,
+        "model": "anthropic/claude-opus-4-6",
         "workspace": "~/.openclaw/workspace-main",
         "subagents": {
           "allowAgents": ["stock-technical", "stock-fundamental", "stock-sentiment"]

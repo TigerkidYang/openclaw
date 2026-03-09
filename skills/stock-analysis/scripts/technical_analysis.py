@@ -241,7 +241,16 @@ def main():
             "levels": find_support_resistance(df)
         }
 
-        print(json.dumps(result, ensure_ascii=False, indent=2))
+        def default_serializer(obj):
+            if isinstance(obj, (np.integer,)):
+                return int(obj)
+            if isinstance(obj, (np.floating,)):
+                return float(obj)
+            if isinstance(obj, np.ndarray):
+                return obj.tolist()
+            raise TypeError(f"Object of type {type(obj)} is not JSON serializable")
+
+        print(json.dumps(result, ensure_ascii=False, indent=2, default=default_serializer))
 
     except Exception as e:
         print(json.dumps({"error": f"分析失败: {str(e)}"}, ensure_ascii=False))

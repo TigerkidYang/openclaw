@@ -28,7 +28,7 @@
         "name": "Technical Analyst",
         "model": "openrouter/google/gemini-3.1-flash-lite-preview",
         "workspace": "~/.openclaw/workspace-technical",
-        "skills": [],
+        "skills": ["stock_analysis"],
         "tools": {
           "allow": ["exec", "read", "write", "web_search", "web_fetch"]
         }
@@ -38,7 +38,7 @@
         "name": "Fundamental Analyst",
         "model": "openrouter/google/gemini-3.1-flash-lite-preview",
         "workspace": "~/.openclaw/workspace-fundamental",
-        "skills": [],
+        "skills": ["stock_fundamental"],
         "tools": {
           "allow": ["exec", "read", "write", "web_search", "web_fetch"]
         }
@@ -48,7 +48,7 @@
         "name": "Sentiment Analyst",
         "model": "openrouter/google/gemini-3.1-flash-lite-preview",
         "workspace": "~/.openclaw/workspace-sentiment",
-        "skills": [],
+        "skills": ["stock_sentiment"],
         "tools": {
           "allow": ["exec", "read", "write", "web_search", "web_fetch"]
         }

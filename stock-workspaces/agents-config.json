@@ -26,7 +26,7 @@
       {
         "id": "stock-technical",
         "name": "Technical Analyst",
-        "model": "openrouter/z-ai/glm-5",
+        "model": "openrouter/google/gemini-3.1-flash-lite-preview",
         "workspace": "~/.openclaw/workspace-technical",
         "skills": [],
         "tools": {
@@ -36,7 +36,7 @@
       {
         "id": "stock-fundamental",
         "name": "Fundamental Analyst",
-        "model": "openrouter/z-ai/glm-5",
+        "model": "openrouter/google/gemini-3.1-flash-lite-preview",
         "workspace": "~/.openclaw/workspace-fundamental",
         "skills": [],
         "tools": {
@@ -46,7 +46,7 @@
       {
         "id": "stock-sentiment",
         "name": "Sentiment Analyst",
-        "model": "openrouter/z-ai/glm-5",
+        "model": "openrouter/google/gemini-3.1-flash-lite-preview",
         "workspace": "~/.openclaw/workspace-sentiment",
         "skills": [],
         "tools": {

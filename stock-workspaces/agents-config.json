@@ -13,7 +13,7 @@
         "id": "main",
         "name": "Stock Orchestrator",
         "default": true,
-        "model": "openrouter/anthropic/claude-opus-4-6",
+        "model": "openrouter/google/gemini-3.1-pro-preview",
         "workspace": "~/.openclaw/workspace-main",
         "subagents": {
           "allowAgents": ["stock-technical", "stock-fundamental", "stock-sentiment"]
@@ -26,6 +26,7 @@
       {
         "id": "stock-technical",
         "name": "Technical Analyst",
+        "model": "openrouter/z-ai/glm-5",
         "workspace": "~/.openclaw/workspace-technical",
         "skills": [],
         "tools": {
@@ -35,6 +36,7 @@
       {
         "id": "stock-fundamental",
         "name": "Fundamental Analyst",
+        "model": "openrouter/z-ai/glm-5",
         "workspace": "~/.openclaw/workspace-fundamental",
         "skills": [],
         "tools": {
@@ -44,6 +46,7 @@
       {
         "id": "stock-sentiment",
         "name": "Sentiment Analyst",
+        "model": "openrouter/z-ai/glm-5",
         "workspace": "~/.openclaw/workspace-sentiment",
         "skills": [],
         "tools": {

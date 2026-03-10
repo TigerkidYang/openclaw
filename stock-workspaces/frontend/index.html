@@ -1,0 +1,426 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>股票分析系统</title>
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #0f1117; color: #e1e4e8; min-height: 100vh; }
+
+.header { padding: 16px 24px; background: #161b22; border-bottom: 1px solid #30363d; }
+.header h1 { font-size: 18px; margin-bottom: 12px; color: #58a6ff; }
+
+.config-row { display: flex; gap: 8px; margin-bottom: 8px; }
+.config-row input { flex: 1; padding: 8px 12px; background: #0d1117; border: 1px solid #30363d; border-radius: 6px; color: #e1e4e8; font-size: 13px; }
+.config-row input::placeholder { color: #484f58; }
+
+.action-row { display: flex; gap: 8px; align-items: center; }
+.action-row input { width: 160px; padding: 8px 12px; background: #0d1117; border: 1px solid #30363d; border-radius: 6px; color: #e1e4e8; font-size: 14px; font-weight: 600; letter-spacing: 1px; }
+.btn { padding: 8px 20px; border: none; border-radius: 6px; font-size: 14px; font-weight: 600; cursor: pointer; transition: all 0.15s; }
+.btn-primary { background: #238636; color: #fff; }
+.btn-primary:hover { background: #2ea043; }
+.btn-primary:disabled { background: #21262d; color: #484f58; cursor: not-allowed; }
+.btn-connect { background: #1f6feb; color: #fff; }
+.btn-connect:hover { background: #388bfd; }
+.btn-disconnect { background: #da3633; color: #fff; }
+.btn-disconnect:hover { background: #f85149; }
+
+.status-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; margin-right: 6px; }
+.status-dot.connected { background: #3fb950; }
+.status-dot.disconnected { background: #f85149; }
+.status-text { font-size: 12px; color: #8b949e; }
+
+.tabs { display: flex; background: #161b22; border-bottom: 1px solid #30363d; padding: 0 24px; overflow-x: auto; }
+.tab { padding: 10px 20px; font-size: 13px; cursor: pointer; border-bottom: 2px solid transparent; color: #8b949e; white-space: nowrap; transition: all 0.15s; display: flex; align-items: center; gap: 6px; }
+.tab:hover { color: #e1e4e8; }
+.tab.active { color: #58a6ff; border-bottom-color: #58a6ff; }
+.tab .badge { font-size: 11px; padding: 1px 6px; border-radius: 10px; }
+.badge.running { background: #1f6feb33; color: #58a6ff; }
+.badge.done { background: #23863633; color: #3fb950; }
+.badge.error { background: #da363333; color: #f85149; }
+.badge.waiting { background: #30363d; color: #8b949e; }
+
+.content { flex: 1; overflow-y: auto; padding: 24px; }
+.content .markdown-body { max-width: 900px; margin: 0 auto; line-height: 1.7; }
+.markdown-body h1 { font-size: 24px; border-bottom: 1px solid #30363d; padding-bottom: 8px; margin: 16px 0; color: #e1e4e8; }
+.markdown-body h2 { font-size: 20px; margin: 20px 0 10px; color: #e1e4e8; }
+.markdown-body h3 { font-size: 16px; margin: 16px 0 8px; color: #e1e4e8; }
+.markdown-body p { margin: 8px 0; }
+.markdown-body table { border-collapse: collapse; width: 100%; margin: 12px 0; }
+.markdown-body th, .markdown-body td { border: 1px solid #30363d; padding: 8px 12px; text-align: left; }
+.markdown-body th { background: #161b22; }
+.markdown-body blockquote { border-left: 3px solid #30363d; padding-left: 12px; color: #8b949e; margin: 8px 0; }
+.markdown-body code { background: #161b22; padding: 2px 6px; border-radius: 4px; font-size: 13px; }
+.markdown-body pre { background: #161b22; padding: 12px; border-radius: 6px; overflow-x: auto; margin: 12px 0; }
+.markdown-body pre code { background: none; padding: 0; }
+.markdown-body ul, .markdown-body ol { padding-left: 24px; margin: 8px 0; }
+.markdown-body li { margin: 4px 0; }
+.markdown-body strong { color: #f0f3f6; }
+.markdown-body hr { border: none; border-top: 1px solid #30363d; margin: 16px 0; }
+
+.placeholder { text-align: center; color: #484f58; padding: 80px 20px; font-size: 14px; }
+.placeholder .icon { font-size: 48px; margin-bottom: 12px; }
+
+.main-container { display: flex; flex-direction: column; height: 100vh; }
+
+.streaming-indicator { display: inline-block; width: 6px; height: 14px; background: #58a6ff; animation: blink 0.8s infinite; vertical-align: middle; margin-left: 2px; }
+@keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
+</style>
+</head>
+<body>
+<div class="main-container">
+  <div class="header">
+    <h1>📊 股票多维分析系统</h1>
+    <div class="config-row">
+      <input id="gatewayUrl" placeholder="Gateway URL (如 wss://xxx.app.github.dev)" />
+      <input id="token" type="password" placeholder="Token" />
+      <button id="connectBtn" class="btn btn-connect" onclick="toggleConnection()">连接</button>
+    </div>
+    <div class="action-row">
+      <input id="stockCode" placeholder="股票代码" maxlength="6" />
+      <button id="analyzeBtn" class="btn btn-primary" onclick="startAnalysis()" disabled>开始分析</button>
+      <span class="status-dot disconnected" id="statusDot"></span>
+      <span class="status-text" id="statusText">未连接</span>
+    </div>
+  </div>
+
+  <div class="tabs" id="tabs">
+    <div class="tab active" data-tab="orchestrator" onclick="switchTab('orchestrator')">
+      综合报告 <span class="badge waiting" id="badge-orchestrator">等待</span>
+    </div>
+    <div class="tab" data-tab="technical" onclick="switchTab('technical')">
+      技术面 <span class="badge waiting" id="badge-technical">等待</span>
+    </div>
+    <div class="tab" data-tab="fundamental" onclick="switchTab('fundamental')">
+      基本面 <span class="badge waiting" id="badge-fundamental">等待</span>
+    </div>
+    <div class="tab" data-tab="sentiment" onclick="switchTab('sentiment')">
+      情绪面 <span class="badge waiting" id="badge-sentiment">等待</span>
+    </div>
+  </div>
+
+  <div class="content" id="content">
+    <div class="placeholder">
+      <div class="icon">📈</div>
+      <p>输入股票代码，点击"开始分析"</p>
+    </div>
+  </div>
+</div>
+
+<script>
+let ws = null;
+let connected = false;
+let reqId = 0;
+let activeTab = 'orchestrator';
+let mainSessionKey = null;
+let pollTimer = null;
+
+// Each tab's state: { status, markdown, streaming }
+const tabs = {
+  orchestrator: { status: 'waiting', markdown: '', streaming: false },
+  technical:    { status: 'waiting', markdown: '', streaming: false },
+  fundamental:  { status: 'waiting', markdown: '', streaming: false },
+  sentiment:    { status: 'waiting', markdown: '', streaming: false },
+};
+
+const agentIdMap = {
+  'stock-technical': 'technical',
+  'stock-fundamental': 'fundamental',
+  'stock-sentiment': 'sentiment',
+};
+
+// --- URL params auto-fill ---
+const params = new URLSearchParams(location.search);
+if (params.get('url')) document.getElementById('gatewayUrl').value = params.get('url');
+if (params.get('token')) document.getElementById('token').value = params.get('token');
+
+function nextId() { return 'r' + (++reqId); }
+
+function setStatus(isConnected, text) {
+  connected = isConnected;
+  document.getElementById('statusDot').className = 'status-dot ' + (isConnected ? 'connected' : 'disconnected');
+  document.getElementById('statusText').textContent = text;
+  document.getElementById('analyzeBtn').disabled = !isConnected;
+  document.getElementById('connectBtn').textContent = isConnected ? '断开' : '连接';
+  document.getElementById('connectBtn').className = 'btn ' + (isConnected ? 'btn-disconnect' : 'btn-connect');
+}
+
+function toggleConnection() {
+  if (connected) {
+    if (ws) ws.close();
+    return;
+  }
+  let url = document.getElementById('gatewayUrl').value.trim();
+  const token = document.getElementById('token').value.trim();
+  if (!url || !token) { alert('请填写 Gateway URL 和 Token'); return; }
+
+  // Normalize URL
+  url = url.replace(/\/+$/, '');
+  if (url.startsWith('https://')) url = 'wss://' + url.slice(8);
+  else if (url.startsWith('http://')) url = 'ws://' + url.slice(7);
+  else if (!url.startsWith('ws://') && !url.startsWith('wss://')) url = 'wss://' + url;
+
+  setStatus(false, '连接中...');
+  ws = new WebSocket(url);
+
+  ws.onopen = () => {
+    // Send connect handshake
+    ws.send(JSON.stringify({
+      type: 'req', id: nextId(), method: 'connect',
+      params: {
+        minProtocol: 1, maxProtocol: 3,
+        client: { id: 'webchat', displayName: 'Stock Analyzer', version: '1.0.0', platform: 'web', mode: 'browser' },
+        auth: { token }
+      }
+    }));
+  };
+
+  ws.onmessage = (e) => {
+    let msg;
+    try { msg = JSON.parse(e.data); } catch { return; }
+    handleMessage(msg);
+  };
+
+  ws.onclose = () => {
+    setStatus(false, '已断开');
+    stopPolling();
+  };
+
+  ws.onerror = () => {
+    setStatus(false, '连接失败');
+  };
+}
+
+function handleMessage(msg) {
+  if (msg.type === 'res') {
+    // Connect response
+    if (msg.ok && msg.payload && msg.payload.type === 'hello-ok') {
+      setStatus(true, '已连接 (协议v' + msg.payload.protocol + ')');
+    }
+    // sessions.list response
+    if (msg.ok && msg.payload && msg.payload.sessions) {
+      handleSessionsList(msg.payload.sessions);
+    }
+    // chat.history response
+    if (msg.ok && msg.payload && msg.payload.messages) {
+      handleHistoryResponse(msg);
+    }
+  }
+
+  if (msg.type === 'event') {
+    if (msg.event === 'chat') handleChatEvent(msg.payload);
+    if (msg.event === 'agent') handleAgentEvent(msg.payload);
+  }
+}
+
+function handleChatEvent(payload) {
+  if (!payload || !payload.sessionKey) return;
+  const tabKey = resolveTabKey(payload.sessionKey);
+  if (!tabKey) return;
+
+  const tab = tabs[tabKey];
+
+  if (payload.state === 'delta') {
+    tab.status = 'running';
+    tab.streaming = true;
+    tab.markdown = extractText(payload.message);
+    updateBadge(tabKey, 'running', '运行中');
+    if (activeTab === tabKey) renderContent();
+  }
+
+  if (payload.state === 'final') {
+    tab.streaming = false;
+    tab.markdown = extractText(payload.message);
+    tab.status = 'done';
+    updateBadge(tabKey, 'done', '完成');
+    if (activeTab === tabKey) renderContent();
+  }
+
+  if (payload.state === 'error') {
+    tab.streaming = false;
+    tab.status = 'error';
+    tab.markdown = '> ⚠️ 分析出错: ' + (payload.errorMessage || '未知错误');
+    updateBadge(tabKey, 'error', '出错');
+    if (activeTab === tabKey) renderContent();
+  }
+}
+
+function handleAgentEvent(payload) {
+  if (!payload || !payload.sessionKey) return;
+  const tabKey = resolveTabKey(payload.sessionKey);
+  if (!tabKey) return;
+
+  // If we see agent events for a sub-agent, mark it as running
+  if (tabs[tabKey].status === 'waiting') {
+    tabs[tabKey].status = 'running';
+    updateBadge(tabKey, 'running', '运行中');
+  }
+}
+
+function resolveTabKey(sessionKey) {
+  if (!sessionKey) return null;
+  // Main orchestrator
+  if (sessionKey === mainSessionKey) return 'orchestrator';
+  // Sub-agents: session key contains agent id
+  const sk = sessionKey.toLowerCase();
+  if (sk.includes('stock-technical') || sk.includes('technical')) return 'technical';
+  if (sk.includes('stock-fundamental') || sk.includes('fundamental')) return 'fundamental';
+  if (sk.includes('stock-sentiment') || sk.includes('sentiment')) return 'sentiment';
+  // Fallback: if it's the main session
+  if (sk.includes(':main:')) return 'orchestrator';
+  return null;
+}
+
+function extractText(message) {
+  if (!message) return '';
+  if (typeof message.content === 'string') return message.content;
+  if (Array.isArray(message.content)) {
+    return message.content
+      .filter(b => b.type === 'text')
+      .map(b => b.text)
+      .join('\n');
+  }
+  return '';
+}
+
+function startAnalysis() {
+  const code = document.getElementById('stockCode').value.trim();
+  if (!code || !connected) return;
+
+  // Reset all tabs
+  for (const key of Object.keys(tabs)) {
+    tabs[key] = { status: 'waiting', markdown: '', streaming: false };
+    updateBadge(key, 'waiting', '等待');
+  }
+  switchTab('orchestrator');
+
+  // Generate a unique session key
+  const userId = 'web-' + Date.now();
+  mainSessionKey = 'agent:main:' + userId;
+
+  tabs.orchestrator.status = 'running';
+  updateBadge('orchestrator', 'running', '运行中');
+  renderContent();
+
+  // Send chat message
+  ws.send(JSON.stringify({
+    type: 'req', id: nextId(), method: 'chat.send',
+    params: {
+      sessionKey: mainSessionKey,
+      message: '分析 ' + code,
+      deliver: true
+    }
+  }));
+
+  // Start polling for sub-agent sessions
+  startPolling();
+}
+
+function startPolling() {
+  stopPolling();
+  pollTimer = setInterval(() => {
+    if (!connected || !mainSessionKey) return;
+
+    // List sessions to find sub-agents
+    ws.send(JSON.stringify({
+      type: 'req', id: 'poll-' + nextId(), method: 'sessions.list',
+      params: { limit: 50, activeMinutes: 60, includeLastMessage: true, includeDerivedTitles: true }
+    }));
+  }, 3000);
+}
+
+function stopPolling() {
+  if (pollTimer) { clearInterval(pollTimer); pollTimer = null; }
+}
+
+function handleSessionsList(sessions) {
+  if (!sessions || !mainSessionKey) return;
+
+  for (const s of sessions) {
+    const tabKey = resolveTabKey(s.key || s.sessionKey);
+    if (!tabKey || tabKey === 'orchestrator') continue;
+
+    const tab = tabs[tabKey];
+    // If sub-agent session exists and we haven't fetched its content yet
+    if (tab.status === 'waiting') {
+      tab.status = 'running';
+      updateBadge(tabKey, 'running', '运行中');
+    }
+
+    // If we don't have content yet, fetch history
+    if (!tab.markdown && tab.status !== 'waiting') {
+      const sk = s.key || s.sessionKey;
+      ws.send(JSON.stringify({
+        type: 'req', id: 'hist-' + tabKey + '-' + nextId(), method: 'chat.history',
+        params: { sessionKey: sk, limit: 100 }
+      }));
+    }
+  }
+
+  // Stop polling if all done
+  const allDone = ['technical', 'fundamental', 'sentiment'].every(k => tabs[k].status === 'done' || tabs[k].status === 'error');
+  if (allDone && tabs.orchestrator.status === 'done') stopPolling();
+}
+
+function handleHistoryResponse(msg) {
+  const sk = msg.payload.sessionKey;
+  const tabKey = resolveTabKey(sk);
+  if (!tabKey || tabKey === 'orchestrator') return;
+
+  const messages = msg.payload.messages || [];
+  // Get the last assistant message
+  let lastAssistant = '';
+  for (const m of messages) {
+    if (m.role === 'assistant') {
+      const text = extractText(m);
+      if (text) lastAssistant = text;
+    }
+  }
+
+  if (lastAssistant) {
+    tabs[tabKey].markdown = lastAssistant;
+    tabs[tabKey].status = 'done';
+    tabs[tabKey].streaming = false;
+    updateBadge(tabKey, 'done', '完成');
+    if (activeTab === tabKey) renderContent();
+  }
+}
+
+function switchTab(tabKey) {
+  activeTab = tabKey;
+  document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.tab === tabKey));
+  renderContent();
+}
+
+function updateBadge(tabKey, cls, text) {
+  const el = document.getElementById('badge-' + tabKey);
+  if (el) { el.className = 'badge ' + cls; el.textContent = text; }
+}
+
+function renderContent() {
+  const tab = tabs[activeTab];
+  const el = document.getElementById('content');
+
+  if (!tab.markdown && tab.status === 'waiting') {
+    el.innerHTML = '<div class="placeholder"><div class="icon">📈</div><p>输入股票代码，点击"开始分析"</p></div>';
+    return;
+  }
+
+  if (!tab.markdown && tab.status === 'running') {
+    el.innerHTML = '<div class="placeholder"><div class="icon">⏳</div><p>分析中，请稍候...</p></div>';
+    return;
+  }
+
+  let html = '<div class="markdown-body">' + marked.parse(tab.markdown) + '</div>';
+  if (tab.streaming) {
+    html += '<span class="streaming-indicator"></span>';
+  }
+  el.innerHTML = html;
+  // Auto-scroll to bottom during streaming
+  if (tab.streaming) el.scrollTop = el.scrollHeight;
+}
+</script>
+</body>
+</html>
